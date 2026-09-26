@@ -1,4 +1,7 @@
-let posts = [
+import type { PostRequest } from "../transport/post/requests.js";
+import type { PostResponse } from "../transport/post/responses.js";
+
+let posts: PostResponse[] = [
   {
     id: 1,
     title: "Dota 2",
@@ -22,14 +25,11 @@ let posts = [
   }
 ];
 
-export function getAll(category, take) {
+export function getAll(category?: string, take?: number): PostResponse[] {
   let result = posts;
 
   if (category) {
-    result = result.filter(
-      (post) => post.category === category
-    );
-  }
+    result = result.filter((post) => post.category === category)}
 
   if (!take) {
     return result;
@@ -39,13 +39,13 @@ export function getAll(category, take) {
   return result;
 }
 
-export function getById(id) {
+export function getById(id: number): PostResponse | undefined {
   return posts.find((post) => post.id === id);
 }
 
-export async function addPost(post) {
+export async function addPost(post: PostRequest) {
   return new Promise((resolve) => {
-    const newPost = {
+    const newPost: PostResponse = {
         id: posts.length + 1,
         ...post,
     };
