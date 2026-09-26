@@ -1,8 +1,8 @@
-import express from "express";
+import {Router} from "express";
 import {getPostsHandler, getPostByIdHandler, createPostHandler} from "../handlers/post.js";
 
 
-const router = express.Router();
+const router = Router();
 
 router.get("/posts", getPostsHandler);
 router.get("/posts/:id", getPostByIdHandler);
