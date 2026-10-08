@@ -1,5 +1,5 @@
 import {Router} from "express";
-import type { PostHandler } from "../handlers/post_types.js";
+import type { PostHandler } from "../handlers/post.js";
 
 
 export function createPostRouter(PostHandler:PostHandler){

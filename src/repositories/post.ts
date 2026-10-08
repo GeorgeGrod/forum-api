@@ -1,61 +1,28 @@
-import type { Post } from "../domain/post/entity.js";
+import { all } from "@prisma/orm-postgres/orm-client";
 import type { PostRepository } from "../domain/post/repository.js";
+import { db as database } from "../prisma/db.js";
 
-export function createPostRepository():PostRepository{
+type Db = typeof database;
 
-  let posts: Post[] = [
-    {
-      id: 1,
-      title: "Dota 2",
-      content: "гайд як грати",
-      author: "Георгій",
-      category: "games",
+export function createPostRepository(db: Db): PostRepository {
+  return {
+    async getAll(category, take) {
+      const posts = category
+        ? db.orm.public.Post.where({ category })
+        : db.orm.public.Post.where(() => all());
+
+      const rows = await (take ? posts.limit(take) : posts).all();
+      return rows.map((p) => ({ ...p, content: p.content ?? "" }));
     },
-    {
-      id: 2,
-      title: "Reddit",
-      content: "Найпопулярніший пост",
-      author: "Богдан",
-      category: "socialMedia",
-    },
-    {
-      id: 3,
-      title: "CS2",
-      content: "гайд як грати",
-      author: "Георгій",
-      category: "games",
-    }
-  ];
-  return{
 
-    getAll(category, take){
-     let result = posts;
-   
-     if (category) {
-       result = result.filter((post) => post.category === category)}
-   
-     if (!take) {
-       return result;
-     }
-   
-     result = result.slice(0, take);
-     return result;
-   },
-   
-    getById(id){
-     return posts.find((post) => post.id === id);
-   },
-   
+    async getById(id) {
+      const post = await db.orm.public.Post.where({ id }).first();
+      return post ? { ...post, content: post.content ?? "" } : undefined;
+    },
+
     async addPost(post) {
-     return new Promise((resolve) => {
-       const newPost: Post = {
-           id: posts.length + 1,
-           ...post,
-       };
-   
-       posts = [...posts, newPost];
-       resolve(newPost);
-     });
-   }
-  }
+      const created = await db.orm.public.Post.create(post);
+      return { ...created, content: created.content ?? "" };
+    },
+  };
 }
