@@ -4,8 +4,16 @@
   "target": "postgres",
   "profileHash": "3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2",
   "roots": {
+    "Category": {
+      "model": "Category",
+      "namespace": "public"
+    },
     "Post": {
       "model": "Post",
+      "namespace": "public"
+    },
+    "User": {
+      "model": "User",
       "namespace": "public"
     }
   },
@@ -13,6 +21,53 @@
     "namespaces": {
       "public": {
         "models": {
+          "Category": {
+            "fields": {
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "name": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "posts": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "categoryId"
+                  ]
+                },
+                "to": {
+                  "model": "Post",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "id": {
+                  "column": "id"
+                },
+                "name": {
+                  "column": "name"
+                }
+              },
+              "namespaceId": "public",
+              "table": "Category"
+            }
+          },
           "Post": {
             "fields": {
               "author": {
@@ -22,15 +77,15 @@
                   "kind": "scalar"
                 }
               },
-              "category": {
+              "categoryId": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/text@1",
+                  "codecId": "pg/int4@1",
                   "kind": "scalar"
                 }
               },
               "content": {
-                "nullable": true,
+                "nullable": false,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
@@ -51,14 +106,31 @@
                 }
               }
             },
-            "relations": {},
+            "relations": {
+              "category": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "categoryId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Category",
+                  "namespace": "public"
+                }
+              }
+            },
             "storage": {
               "fields": {
                 "author": {
                   "column": "author"
                 },
-                "category": {
-                  "column": "category"
+                "categoryId": {
+                  "column": "categoryId"
                 },
                 "content": {
                   "column": "content"
@@ -73,6 +145,57 @@
               "namespaceId": "public",
               "table": "Post"
             }
+          },
+          "User": {
+            "fields": {
+              "email": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "name": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "passwordHash": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {},
+            "storage": {
+              "fields": {
+                "email": {
+                  "column": "email"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "name": {
+                  "column": "name"
+                },
+                "passwordHash": {
+                  "column": "passwordHash"
+                }
+              },
+              "namespaceId": "public",
+              "table": "User"
+            }
           }
         }
       }
@@ -83,6 +206,32 @@
       "public": {
         "entries": {
           "table": {
+            "Category": {
+              "columns": {
+                "id": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "name": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "Post": {
               "columns": {
                 "author": {
@@ -90,15 +239,15 @@
                   "dataType": "pg/text",
                   "nullable": false
                 },
-                "category": {
-                  "codecId": "pg/text@1",
-                  "dataType": "pg/text",
+                "categoryId": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "nullable": false
                 },
                 "content": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
-                  "nullable": true
+                  "nullable": false
                 },
                 "id": {
                   "codecId": "pg/int4@1",
@@ -115,6 +264,71 @@
                   "nullable": false
                 }
               },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "Post_categoryId_idx_15c304f2"
+                  },
+                  "source": {
+                    "columns": [
+                      "categoryId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Post"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Category"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "categoryId"
+                  ],
+                  "name": "Post_categoryId_idx_15c304f2",
+                  "prefix": "Post_categoryId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "User": {
+              "columns": {
+                "email": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "name": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "passwordHash": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                }
+              },
               "foreignKeys": [],
               "indexes": [],
               "primaryKey": {
@@ -122,7 +336,13 @@
                   "id"
                 ]
               },
-              "uniques": []
+              "uniques": [
+                {
+                  "columns": [
+                    "email"
+                  ]
+                }
+              ]
             }
           }
         },
@@ -130,7 +350,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "ea82953b1f39fcd187e685b8dfc6014bf3034edae607e2ef23d65f3d94c5cead"
+    "storageHash": "576ef895842a97bf73dbca8a1f60c136c4f7572c7f43e7be1bae7042012dcf6e"
   },
   "capabilities": {
     "postgres": {

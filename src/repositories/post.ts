@@ -1,28 +1,35 @@
 import { all } from "@prisma/orm-postgres/orm-client";
 import type { PostRepository } from "../domain/post/repository.js";
-import { db as database } from "../prisma/db.js";
+import type { PostgresClient } from "@prisma/orm-postgres/runtime";
+import type { Contract } from "../prisma/contract.js";
 
-type Db = typeof database;
-
-export function createPostRepository(db: Db): PostRepository {
+export function createPostRepository(db: PostgresClient<Contract>): PostRepository {
   return {
-    async getAll(category, take) {
-      const posts = category
-        ? db.orm.public.Post.where({ category })
-        : db.orm.public.Post.where(() => all());
+      async getAll(categoryName, take) {
+      if (categoryName) {
+        const category = await db.orm.public.Category.where({ name: categoryName }).first();
+        if (!category) return [];
 
-      const rows = await (take ? posts.limit(take) : posts).all();
-      return rows.map((p) => ({ ...p, content: p.content ?? "" }));
+        if (take) {
+          return await db.orm.public.Post.where({ categoryId: category.id }).include("category").limit(take).all();
+        }
+
+        return await db.orm.public.Post.where({ categoryId: category.id }).include("category").all();
+      }
+
+      if (take) {
+        return await db.orm.public.Post.where(() => all()).include("category").limit(take).all();
+      }
+
+      return await db.orm.public.Post.where(() => all()).include("category").all();
     },
 
     async getById(id) {
-      const post = await db.orm.public.Post.where({ id }).first();
-      return post ? { ...post, content: post.content ?? "" } : undefined;
+      return await db.orm.public.Post.where({ id }).include("category").first();
     },
 
     async addPost(post) {
-      const created = await db.orm.public.Post.create(post);
-      return { ...created, content: created.content ?? "" };
+      return await db.orm.public.Post.create(post);
     },
   };
 }
