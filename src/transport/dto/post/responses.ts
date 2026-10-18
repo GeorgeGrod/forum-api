@@ -1,7 +1,17 @@
-export interface PostResponse{
-    id: number
-    title: string
-    content: string
-    author: string
-    category: string
+import type { CategoryResponse } from "../category/responses.js";
+
+export interface PostResponse {
+  id: number;
+  title: string;
+  content: string;
+  author: string;
+  category: string;
+}
+
+export interface CreatedPostResponse {
+  id: number;
+  title: string;
+  content: string;
+  author: string;
+  categoryId: number;
 }

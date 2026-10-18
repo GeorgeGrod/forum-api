@@ -1,5 +1,5 @@
-import type { PostRepository } from "../domain/post/repository.js";
-import type { PostService } from "./post_types.js";
+import type { PostRepository } from "../../domain/post/repository.js";
+import type { PostService } from "./post.types.js";
 
 export function createPostService(postRepository: PostRepository): PostService {
     return {

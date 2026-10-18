@@ -3,10 +3,23 @@
 
 
 model Post {
-  id        Int               @id @default(autoincrement())
-  title     String
-  content   String?
-  author    String             
-  category  String
+  id         Int      @id @default(autoincrement())
+  title      String
+  content    String
+  author     String
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+}
 
+model Category {
+  id    Int    @id @default(autoincrement())
+  name  String
+  posts Post[]
+}
+
+model User {
+  id           Int    @id @default(autoincrement())
+  email        String @unique
+  name         String
+  passwordHash String
 }
