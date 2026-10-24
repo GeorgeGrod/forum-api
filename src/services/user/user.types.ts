@@ -6,7 +6,18 @@ export interface RegisterData {
   password: string;
 }
 
+export interface LoginData {
+  email: string;
+  password: string;
+}
+
 export interface UserService {
   getUserByEmail(email: string): Promise<User | null>;
   registerUser(data: RegisterData): Promise<User>;
+  login(input: LoginData): Promise<string>;
+}
+
+export interface PasswordHasher {
+  hash(password: string): Promise<string>;
+  verify(password: string, hash: string): Promise<boolean>;
 }
