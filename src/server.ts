@@ -12,6 +12,7 @@ import { createUserRepository } from "./repositories/user.js";
 import { createUserService } from "./services/user/user.js";
 import { createUserHandler } from "./transport/handlers/user.js";
 import { createUserRouter } from "./transport/routers/user.js";
+import { passwordHasher } from "./services/user/password.hasher.js";
 
 const app = express();
 
@@ -23,7 +24,7 @@ const userRepository = createUserRepository(db);
 
 const categoryService = createCategoryService(categoryRepository);
 const postService = createPostService(postRepository);
-const userService = createUserService(userRepository);
+const userService = createUserService(userRepository, passwordHasher);
 
 const categoryHandler = createCategoryHandler(categoryService);
 const postHandler = createPostHandler(postService, categoryService);
