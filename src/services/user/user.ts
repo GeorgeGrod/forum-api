@@ -1,15 +1,15 @@
-
 import type { UserRepository } from "../../domain/user/repository.js";
-import type { PasswordHasher, UserService } from "./user.types.js";
+import type { UserService } from "./user.types.js";
+import { hashPassword, verifyPassword } from "../../lib/password.js";
 
-export function createUserService(userRepository: UserRepository, hasher: PasswordHasher): UserService {
+export function createUserService(userRepository: UserRepository): UserService {
   return {
     getUserByEmail(email) {
       return userRepository.getByEmail(email);
     },
 
     async registerUser(data) {
-      const passwordHash = await hasher.hash(data.password);
+      const passwordHash = await hashPassword(data.password);
 
       return userRepository.addUser({
         email: data.email,
@@ -27,7 +27,7 @@ export function createUserService(userRepository: UserRepository, hasher: Passwo
         throw new Error("Invalid email or password");
       }
 
-      const isPasswordValid = await hasher.verify(
+      const isPasswordValid = await verifyPassword(
         input.password,
         user.passwordHash
       );
