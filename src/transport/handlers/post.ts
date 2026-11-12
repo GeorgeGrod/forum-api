@@ -1,3 +1,4 @@
+
 import type { Request, Response } from "express";
 import type { PostResponse } from "../dto/post/responses.js";
 import type { PostRequest } from "../dto/post/requests.js";
@@ -5,7 +6,7 @@ import type { ErrorResponse } from "../dto/errors.js";
 import type { Post } from "../../domain/post/entity.js";
 import type { PostService } from "../../services/post/post.types.js";
 import type { CategoryService } from "../../services/category/category.types.js";
-
+import type { UserService } from "../../services/user/user.types.js";
 
 export interface PostHandler {
   getPostsHandler(
@@ -22,8 +23,12 @@ export interface PostHandler {
     req: Request<{}, PostResponse | ErrorResponse, PostRequest>,
     res: Response<PostResponse | ErrorResponse>
   ): void;
-}
 
+  getMyPosts(
+    req: Request,
+    res: Response
+  ): Promise<void>;
+}
 
 function toPostResponse(post: Post): PostResponse {
   return {
@@ -35,13 +40,12 @@ function toPostResponse(post: Post): PostResponse {
   };
 }
 
-
 export function createPostHandler(
   postService: PostService,
   categoryService: CategoryService,
+  userService: UserService,
 ): PostHandler {
   return {
-
     async getPostsHandler(req, res) {
       const { category, take } = req.query;
 
@@ -57,21 +61,12 @@ export function createPostHandler(
         }
       }
 
-      let categoryName: string | undefined;
-
-      if (category) {
-        categoryName = category.trim().toLowerCase();
-      }
+      const categoryName = category?.trim().toLowerCase();
 
       try {
         const posts = await postService.getPosts(categoryName, numberTake);
 
-        const result: PostResponse[] = [];
-        for (const post of posts) {
-          result.push(toPostResponse(post));
-        }
-
-        return res.status(200).json(result);
+        return res.status(200).json(posts.map(toPostResponse));
       } catch {
         return res.status(500).json({
           message: "Internal server error",
@@ -106,15 +101,21 @@ export function createPostHandler(
     },
 
     async createPostHandler(req, res) {
-      const { title, content, author, categoryId } = req.body;
+      const userId = res.locals.userId;
+
+      if (typeof userId !== "number") {
+        return res.status(401).json({
+          message: "Unauthorized",
+        });
+      }
+
+      const { title, content, categoryId } = req.body;
 
       if (
         typeof title !== "string" ||
         !title.trim() ||
         typeof content !== "string" ||
-        !content.trim() ||
-        typeof author !== "string" ||
-        !author.trim()
+        !content.trim()
       ) {
         return res.status(422).json({
           message: "Invalid post data",
@@ -128,7 +129,10 @@ export function createPostHandler(
       }
 
       try {
-        const category = await categoryService.getCategoryById(categoryId);
+        const [category, user] = await Promise.all([
+          categoryService.getCategoryById(categoryId),
+          userService.me(userId),
+        ]);
 
         if (!category) {
           return res.status(404).json({
@@ -139,7 +143,8 @@ export function createPostHandler(
         const created = await postService.createPost({
           title: title.trim(),
           content: content.trim(),
-          author: author.trim(),
+          author: user.name,
+          userId,
           categoryId,
         });
 
@@ -157,5 +162,25 @@ export function createPostHandler(
       }
     },
 
-  }
+    async getMyPosts(req, res) {
+      const userId = res.locals.userId;
+
+      if (typeof userId !== "number") {
+        res.status(401).json({
+          message: "Unauthorized",
+        });
+        return;
+      }
+
+      try {
+        const posts = await postService.getPostsByAuthorId(userId);
+
+        res.status(200).json(posts.map(toPostResponse));
+      } catch {
+        res.status(500).json({
+          message: "Internal server error",
+        });
+      }
+    },
+  };
 }

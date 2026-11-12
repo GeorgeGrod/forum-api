@@ -4,4 +4,5 @@ export interface PostService {
     getPosts(category?: string, take?: number): Promise<Post[]>;
     getPostById(id: number): Promise<Post | null>;
     createPost(post: NewPost): Promise<CreatedPost>;
+    getPostsByAuthorId(userId: number): Promise<Post[]>;
 }

@@ -2,6 +2,7 @@ import { all } from "@prisma/orm-postgres/orm-client";
 import type { PostRepository } from "../domain/post/repository.js";
 import type { PostgresClient } from "@prisma/orm-postgres/runtime";
 import type { Contract } from "../prisma/contract.js";
+import { error } from "node:console";
 
 export function createPostRepository(db: PostgresClient<Contract>): PostRepository {
   return {
@@ -29,7 +30,16 @@ export function createPostRepository(db: PostgresClient<Contract>): PostReposito
     },
 
     async addPost(post) {
-      return await db.orm.public.Post.create(post);
+      try{
+        return await db.orm.public.Post.create(post);
+      }catch (error) {
+        if (error instanceof Error && "sqlState" in error) {
+          if (error.sqlState === "23505") {
+              throw new Error("PRODUCT ALREADY EXIST");
+          }}}
+          throw error
     },
-  };
-}
+    async getByAuthorId(userId: number) {
+      return await db.orm.public.Post.where({ userId }).include("category").all();
+    }
+}}

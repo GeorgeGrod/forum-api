@@ -9,7 +9,19 @@ export function createUserRepository(db: PostgresClient<Contract>): UserReposito
     },
 
     async addUser(user) {
-      return await db.orm.public.User.create(user);
+      try {
+          const newUser = await db.orm.public.User.create(user);
+          return newUser;
+      }
+      catch(error) {
+          if(error instanceof Error && "sqlState" in error && error.sqlState == "23505") {
+              throw new Error("Email is already used!");
+          }
+          throw error;
+      }
+    },
+    async getUserById(id) {
+      return db.orm.public.User.where({ id }).first();
     },
   };
 }

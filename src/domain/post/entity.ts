@@ -13,6 +13,7 @@ export interface NewPost {
   content: string;
   author: string;
   categoryId: number;
+  userId: number;
 }
 
 export interface CreatedPost {

@@ -14,5 +14,8 @@ export function createPostService(postRepository: PostRepository): PostService {
         createPost(post) {
             return postRepository.addPost(post);
         },
+        async getPostsByAuthorId(userId: number) {
+            return postRepository.getByAuthorId(userId);
+        },
     };
 }
