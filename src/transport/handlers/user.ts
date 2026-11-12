@@ -1,74 +1,135 @@
+import "dotenv/config";
 
 import type { Request, Response } from "express";
-import type { RegisterRequest } from "../dto/user/requests.js";
-import type { UserResponse } from "../dto/user/responses.js";
-import type { ErrorResponse } from "../dto/errors.js";
-import type { UserService } from "../../services/user/user.types.js";
+import type { UserService, UserTokens } from "../../services/user/user.types.js";
+import type { LoginRequest, RegisterRequest } from "../dto/user/requests";
 
-export interface UserHandler {
-  registerHandler(
-    req: Request<{}, UserResponse | ErrorResponse, RegisterRequest>,
-    res: Response<UserResponse | ErrorResponse>
-  ): Promise<void>;
+
+function setUserTokens(res: Response, tokens: UserTokens) {
+  res.cookie("accessToken", tokens.accessToken, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 15 * 60 * 1000,
+    path: "/",
+  });
+
+  res.cookie("refreshToken", tokens.refreshToken, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  });
 }
 
-export function createUserHandler(userService: UserService): UserHandler {
+export interface UserHandlerContract {
+  register: (
+    req: Request<{}, {}, RegisterRequest>,
+    res: Response,
+  ) => Promise<void>;
+
+  login: (
+    req: Request<{}, {}, LoginRequest>,
+    res: Response,
+  ) => Promise<void>;
+
+  refresh(req: Request, res: Response): Promise<void>;
+
+  me(req: Request, res: Response): Promise<void>;
+}
+
+export function createUserHandler(
+  service: UserService,
+): UserHandlerContract {
   return {
-    async registerHandler(req, res): Promise<void> {
-      const { email, name, password } = req.body;
+    async register(req, res) {
+      try {
+        const { email, name, password } = req.body;
 
-      if (
-        typeof email !== "string" ||
-        !email.trim() ||
-        typeof name !== "string" ||
-        !name.trim() ||
-        typeof password !== "string" ||
-        !password
-      ) {
-        res.status(422).json({
-          message: "Invalid registration data",
-        });
-        return;
+        if (!email || !name || !password) {
+          res.status(422).json({ message: "Validation Error!" });
+          return;
+        }
+
+        const user = await service.register({ email, name, password });
+
+        res.status(201).json(user);
+      } catch (error) {
+        if (error instanceof Error && error.message === "Email is already used!") {
+          res.status(409).json({ message: error.message });
+          return;
+        }
+
+        res.status(500).json({ message: "Internal Server Error!" });
       }
+    },
 
-      const normalizedEmail = email.trim().toLowerCase();
+    async login(req, res) {
+      try {
+        const { email, password } = req.body;
 
-      if (password.length < 3) {
-        res.status(422).json({
-          message: "Password must be at least 3 characters",
+        if (!email || !password) {
+          res.status(422).json({ message: "Validation Error!" });
+          return;
+        }
+
+        const result = await service.login({ email, password });
+
+        setUserTokens(res, {
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
         });
+
+        res.status(200).json(result.user);
+      } catch (error) {
+        if (error instanceof Error && error.message === "Invalid email or password") {
+          res.status(401).json({ message: error.message });
+          return;
+        }
+
+        res.status(500).json({ message: "Internal Server Error!" });
+      }
+    },
+
+    async refresh(req, res) {
+      const refreshToken = req.cookies?.refreshToken;
+
+      if (typeof refreshToken !== "string") {
+        res.status(401).json({ message: "Unauthorized" });
         return;
       }
 
       try {
-        const exists = await userService.getUserByEmail(
-          normalizedEmail
-        );
+        const tokens = await service.refresh(refreshToken);
 
-        if (exists) {
-          res.status(409).json({
-            message: "This email already used",
-          });
+        setUserTokens(res, tokens);
+
+        res.status(200).json({ message: "Tokens updated" });
+      } catch (error) {
+        res.status(401).json({ message: "Invalid refresh token" });
+      }
+    },
+
+    async me(req, res) {
+      try {
+        const userId = res.locals.userId;
+
+        if (typeof userId !== "number") {
+          res.status(401).json({ message: "Unauthorized" });
           return;
         }
 
-        const user = await userService.registerUser({
-          email: normalizedEmail,
-          name: name.trim(),
-          password,
-        });
+        const user = await service.me(userId);
 
-        res.status(201).json({
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        });
+        res.status(200).json(user);
       } catch (error) {
-        console.error("Registration error:", error);
+        if (error instanceof Error && error.message === "UNAUTHORIZED") {
+          res.status(401).json({ message: "Unauthorized" });
+          return;
+        }
 
-        res.status(500).json({
-          message: "Internal server error",
-        });
+        res.status(500).json({ message: "Internal Server Error!" });
       }
     },
   };

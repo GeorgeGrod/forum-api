@@ -1,21 +1,31 @@
 import type { UserRepository } from "../../domain/user/repository.js";
-import type { UserService } from "./user.types.js";
-import { hashPassword, verifyPassword } from "../../lib/password.js";
+import type {
+  UserService,
+  TokenVerifierContract,
+  TokenSignerContract,
+  PasswordHasherContract,
+  PublicUser,
+} from "./user.types.js";
 
-export function createUserService(userRepository: UserRepository): UserService {
+export function createUserService(
+  userRepository: UserRepository,
+  passwordHasher: PasswordHasherContract,
+  tokenSigner: TokenSignerContract,
+  tokenVerifier: TokenVerifierContract,
+): UserService {
   return {
-    getUserByEmail(email) {
-      return userRepository.getByEmail(email);
-    },
+    async register(data) {
+      const passwordHash = await passwordHasher.hashPassword(data.password);
 
-    async registerUser(data) {
-      const passwordHash = await hashPassword(data.password);
-
-      return userRepository.addUser({
-        email: data.email,
-        name: data.name,
+      const user = await userRepository.addUser({
+        email: data.email.trim().toLowerCase(),
+        name: data.name.trim(),
         passwordHash,
       });
+
+      const { passwordHash: _, ...publicUser } = user;
+
+      return publicUser;
     },
 
     async login(input) {
@@ -27,7 +37,7 @@ export function createUserService(userRepository: UserRepository): UserService {
         throw new Error("Invalid email or password");
       }
 
-      const isPasswordValid = await verifyPassword(
+      const isPasswordValid = await passwordHasher.verifyPassword(
         input.password,
         user.passwordHash
       );
@@ -36,7 +46,43 @@ export function createUserService(userRepository: UserRepository): UserService {
         throw new Error("Invalid email or password");
       }
 
-      return String(user.id);
+      const publicUser: PublicUser = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      };
+
+      return {
+        user: publicUser,
+        accessToken: tokenSigner.signAccessToken(user.id),
+        refreshToken: tokenSigner.signRefreshToken(user.id),
+      };
+    },
+
+    async refresh(refreshToken) {
+      const userId = tokenVerifier.verifyRefreshToken(refreshToken);
+      const user = await userRepository.getUserById(userId);
+
+      if (!user) {
+        throw new Error("Invalid refresh token");
+      }
+
+      return {
+        accessToken: tokenSigner.signAccessToken(user.id),
+        refreshToken: tokenSigner.signRefreshToken(user.id),
+      };
+    },
+
+    async me(id) {
+      const user = await userRepository.getUserById(id);
+
+      if (!user) {
+        throw new Error("UNAUTHORIZED");
+      }
+
+      const { passwordHash: _, ...publicUser } = user;
+
+      return publicUser;
     },
   };
 }

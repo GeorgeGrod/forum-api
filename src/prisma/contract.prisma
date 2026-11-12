@@ -9,6 +9,8 @@ model Post {
   author     String
   categoryId Int
   category   Category @relation(fields: [categoryId], references: [id])
+  userId Int?
+  user   User? @relation(fields: [userId], references: [id])
 }
 
 model Category {
@@ -22,4 +24,5 @@ model User {
   email        String @unique
   name         String
   passwordHash String
+  posts    Post[]
 }

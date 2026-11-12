@@ -1,0 +1,148 @@
+[
+  {
+    "id": "column.Post.userId",
+    "label": "Add column userId to Post",
+    "summary": "Adds column userId to table Post",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "userId",
+        "table": "Post"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"userId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Post",
+          "userId"
+        ]
+      },
+      {
+        "description": "ensure table \"Post\" is empty before adding NOT NULL column without default",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"public\".\"Post\" LIMIT 1) AS \"result\"",
+        "params": [],
+        "meta": {
+          "requiredColumn": {
+            "table": "Post",
+            "column": "userId",
+            "reason": "newField"
+          }
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"userId\"",
+        "sql": "ALTER TABLE \"public\".\"Post\" ADD COLUMN \"userId\" int4 NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"userId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Post",
+          "userId"
+        ]
+      },
+      {
+        "description": "verify column \"userId\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "Post",
+          "userId",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Post.Post_userId_idx_a489d58a",
+    "label": "Create index \"Post_userId_idx_a489d58a\" on \"Post\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Post_userId_idx_a489d58a",
+        "table": "Post"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Post_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Post_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Post_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"Post_userId_idx_a489d58a\" ON \"public\".\"Post\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Post_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Post_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Post.Post_userId_fkey",
+    "label": "Add foreign key \"Post_userId_fkey\" on \"Post\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Post_userId_fkey",
+        "table": "Post"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Post_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Post_userId_fkey",
+          "public",
+          "\"public\".\"Post\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Post_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Post\"\nADD CONSTRAINT \"Post_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Post_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Post_userId_fkey",
+          "public",
+          "\"public\".\"Post\""
+        ]
+      }
+    ]
+  }
+]
